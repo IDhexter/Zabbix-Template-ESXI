@@ -1,0 +1,354 @@
+# =========================================================================================
+# METADADOS DO TEMPLATE ZABBIX
+# =========================================================================================
+# OBJETIVO: Monitoramento de Esxi 8.0.3 via SNMP, para o cliente Safra.
+# AUTOR: Alex Mota
+# DATA DE CRIAÇÃO: 22-06-2026
+# VERSÃO: 2.0
+# DEPENDÊNCIAS: Requer macro {$SNMP_COMMUNITY} configurada no host/template.
+# REFERÊNCIA: Baseado na MIB, retiradas diretamente do ativo via SNMPWALK.
+#
+# INFORMAÇÕES ADICIONAIS:
+# - MIBs Utilizadas: HOST-RESOURCES-MIB, IF-MIB, SNMPv2-MIB.
+# - Descobertas Ativas (LLD):
+#     1. CPU Core Discovery (Descoberta e monitoramento dinâmico de cores físicos).
+#     2. Physical Memory Discovery (Monitoramento de RAM total/utilizada via Real Memory).
+#     3. Network Interface Discovery (Descoberta de interfaces de rede ativas).
+# - Limites e Alarmes (Macros de Usuário editáveis):
+#     - Atenção (ATT) >= 80%
+#     - Problema (TROU) >= 90%
+#     - Crítico (CRIT) >= 95%
+# - Triggers de Interface Inteligentes: Evita alarmes em interfaces desabilitadas no ESXi (Admin Down).
+# =========================================================================================
+zabbix_export:
+  version: '6.0'
+  date: '2026-06-22T19:43:00Z'
+  groups:
+    - uuid: 'b9e98ca79c434b81ad451b6f8fcedd66'
+      name: 'Templates/Virtualization'
+  templates:
+    - uuid: '941d69f74d10498a8812fd58ae6b6479'
+      template: 'VMware ESXi SNMP Custom'
+      name: 'VMware ESXi SNMP Custom'
+      description: |
+        OBJETIVO: Monitoramento de Esxi 8.0.3 via SNMP, para o cliente Safra.
+        AUTOR: Alex Mota
+        DATA DE CRIAÇÃO: 22-06-2026
+        VERSÃO: 2.0
+        DEPENDÊNCIAS: Requer macro {$SNMP_COMMUNITY} configurada no host/template.
+        REFERÊNCIA: Baseado na MIB, retiradas diretamente do ativo via SNMPWALK.
+
+        INFORMAÇÕES ADICIONAIS:
+        - MIBs Utilizadas: HOST-RESOURCES-MIB, IF-MIB, SNMPv2-MIB.
+        - Descobertas Ativas (LLD):
+            1. CPU Core Discovery (Descoberta e monitoramento dinâmico de cores físicos).
+            2. Physical Memory Discovery (Monitoramento de RAM total/utilizada via Real Memory).
+            3. Network Interface Discovery (Descoberta de interfaces de rede ativas).
+        - Limites e Alarmes (Macros de Usuário editáveis):
+            - Atenção (ATT) >= 80%
+            - Problema (TROU) >= 90%
+            - Crítico (CRIT) >= 95%
+        - Triggers de Interface Inteligentes: Evita alarmes em interfaces desabilitadas no ESXi (Admin Down).
+      groups:
+        - name: 'Templates/Virtualization'
+      macros:
+        - macro: '{$CPU.UTIL.ATT}'
+          value: '80'
+        - macro: '{$CPU.UTIL.TROU}'
+          value: '90'
+        - macro: '{$CPU.UTIL.CRIT}'
+          value: '95'
+        - macro: '{$MEMORY.UTIL.MAX.ATT}'
+          value: '80'
+        - macro: '{$MEMORY.UTIL.MAX.TROU}'
+          value: '90'
+        - macro: '{$MEMORY.UTIL.MAX.CRIT}'
+          value: '95'
+      items:
+        - uuid: '292dca69dfa7472d8d402cd16ee8d8f4'
+          name: 'System name'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.1.5.0'
+          key: system.name
+          delay: 1h
+          trends: '0'
+          value_type: CHAR
+          description: 'Nome do host atribuído pelo administrador.'
+          inventory_link: NAME
+          tags:
+            - tag: component
+              value: system
+        - uuid: '7310a26f136e4d9ba61028b78948246d'
+          name: 'System description'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.1.1.0'
+          key: system.descr
+          delay: 1h
+          trends: '0'
+          value_type: CHAR
+          description: 'Descrição textual do sistema (ex: versão do ESXi).'
+          tags:
+            - tag: component
+              value: system
+        - uuid: 'fa3e2413ffba41d3813f07bf7919198e'
+          name: 'System uptime'
+          type: SNMP_AGENT
+          snmp_oid: '1.3.6.1.2.1.1.3.0'
+          key: system.uptime
+          delay: 30s
+          history: 7d
+          trends: 365d
+          units: s
+          value_type: FLOAT
+          preprocessing:
+            - type: MULTIPLIER
+              parameters:
+                - '0.01'
+          description: 'Tempo desde a inicialização do gerenciamento de rede (uptime).'
+          tags:
+            - tag: component
+              value: system
+          triggers:
+            - uuid: '7645bae70b40446eb0ca0e916348565d'
+              expression: 'nodata(/VMware ESXi SNMP Custom/system.uptime, 5m) = 1'
+              name: 'Host is unavailable (No SNMP data for 5 minutes)'
+              priority: DISASTER
+              description: 'O host não está respondendo às consultas SNMP há mais de 5 minutos.'
+            - uuid: 'e84a476f63134c87afd48d0231f78def'
+              expression: 'last(/VMware ESXi SNMP Custom/system.uptime) < 10m'
+              name: 'Host has been restarted'
+              priority: WARNING
+              description: 'O host foi reiniciado há menos de 10 minutos.'
+              dependencies:
+                - name: 'Host is unavailable (No SNMP data for 5 minutes)'
+                  expression: 'nodata(/VMware ESXi SNMP Custom/system.uptime, 5m) = 1'
+        - uuid: '0f2e42ca55794b06ab28d0bda43dba3f'
+          name: 'CPU average utilization'
+          type: CALCULATED
+          key: vm.cpu.util
+          delay: 1m
+          history: 7d
+          trends: 365d
+          value_type: FLOAT
+          units: '%'
+          params: 'avg(last_foreach(//hrProcessorLoad[*]))'
+          description: 'Média de utilização de CPU calculada dinamicamente entre todos os cores de processamento.'
+          tags:
+            - tag: component
+              value: cpu
+          triggers:
+            - uuid: '5bd44e0cf4074af6b3719d910c2e423f'
+              expression: 'last(/VMware ESXi SNMP Custom/vm.cpu.util) >= {$CPU.UTIL.ATT}'
+              name: 'Average CPU utilization is attention (>= {$CPU.UTIL.ATT}%)'
+              priority: WARNING
+              dependencies:
+                - name: 'Average CPU utilization is trouble (>= {$CPU.UTIL.TROU}%)'
+                  expression: 'last(/VMware ESXi SNMP Custom/vm.cpu.util) >= {$CPU.UTIL.TROU}'
+            - uuid: 'bf0c05aa027c45bb9ffbc0b3205d630f'
+              expression: 'last(/VMware ESXi SNMP Custom/vm.cpu.util) >= {$CPU.UTIL.TROU}'
+              name: 'Average CPU utilization is trouble (>= {$CPU.UTIL.TROU}%)'
+              priority: AVERAGE
+              dependencies:
+                - name: 'Average CPU utilization is critical (>= {$CPU.UTIL.CRIT}%)'
+                  expression: 'last(/VMware ESXi SNMP Custom/vm.cpu.util) >= {$CPU.UTIL.CRIT}'
+            - uuid: '56c52ea0ee8a4d4a884c4e8153fa13f2'
+              expression: 'last(/VMware ESXi SNMP Custom/vm.cpu.util) >= {$CPU.UTIL.CRIT}'
+              name: 'Average CPU utilization is critical (>= {$CPU.UTIL.CRIT}%)'
+              priority: HIGH
+      discovery_rules:
+        - uuid: '4f439cb2437f4424bd19688f027957b5'
+          name: 'CPU Core Discovery'
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#CPU_LOAD}, 1.3.6.1.2.1.25.3.3.1.2]'
+          key: hrProcessorLoad.discovery
+          delay: 1h
+          lifetime: '0'
+          item_prototypes:
+            - uuid: '3437f7bcb55946739e64361e40d5b0d9'
+              name: 'CPU Core {#SNMPINDEX} utilization'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.2.1.25.3.3.1.2.{#SNMPINDEX}'
+              key: 'hrProcessorLoad[{#SNMPINDEX}]'
+              delay: 1m
+              history: 7d
+              trends: 365d
+              value_type: FLOAT
+              units: '%'
+              description: 'Utilização do core de CPU número {#SNMPINDEX}.'
+              tags:
+                - tag: component
+                  value: cpu
+        - uuid: '3da8a3c944654fed86d2081b2493d94d'
+          name: 'Physical Memory Discovery'
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#STORAGE_TYPE},1.3.6.1.2.1.25.2.3.1.2,{#STORAGE_DESCR},1.3.6.1.2.1.25.2.3.1.3]'
+          key: vm.memory.discovery
+          delay: 1h
+          lifetime: '0'
+          filter:
+            evaltype: AND
+            conditions:
+              - macro: '{#STORAGE_DESCR}'
+                value: '^Real Memory$'
+                formulaid: A
+          item_prototypes:
+            - uuid: '3062524491af479b8932b167e6b05dbf'
+              name: 'Memory Allocation Units'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.2.1.25.2.3.1.4.{#SNMPINDEX}'
+              key: 'vm.memory.units[{#SNMPINDEX}]'
+              delay: 1h
+              history: 7d
+              trends: '0'
+              value_type: UNSIGNED
+              units: B
+              description: 'O tamanho da unidade de alocação de memória (geralmente 1024 bytes).'
+              tags:
+                - tag: component
+                  value: memory
+            - uuid: 'a9027063922f40c1be5f3b75df5f922e'
+              name: 'Memory Total Size (raw)'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.2.1.25.2.3.1.5.{#SNMPINDEX}'
+              key: 'vm.memory.total_raw[{#SNMPINDEX}]'
+              delay: 5m
+              history: 7d
+              trends: '0'
+              value_type: UNSIGNED
+              description: 'Tamanho total da memória em unidades de alocação.'
+              tags:
+                - tag: component
+                  value: memory
+            - uuid: '35f247827cb245bf94f290a88a726427'
+              name: 'Memory Used Size (raw)'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.2.1.25.2.3.1.6.{#SNMPINDEX}'
+              key: 'vm.memory.used_raw[{#SNMPINDEX}]'
+              delay: 1m
+              history: 7d
+              trends: '0'
+              value_type: UNSIGNED
+              description: 'Tamanho da memória utilizada em unidades de alocação.'
+              tags:
+                - tag: component
+                  value: memory
+            - uuid: '4eed111fe0834ccd80d0c54f154e1562'
+              name: 'Total Memory'
+              type: CALCULATED
+              key: 'vm.memory.total[{#SNMPINDEX}]'
+              delay: 5m
+              history: 7d
+              trends: 365d
+              value_type: UNSIGNED
+              units: B
+              params: 'last(//vm.memory.total_raw[{#SNMPINDEX}]) * last(//vm.memory.units[{#SNMPINDEX}])'
+              description: 'Capacidade total de memória física em bytes.'
+              tags:
+                - tag: component
+                  value: memory
+            - uuid: '1da8ebee70004928b802b4ff4aac59ce'
+              name: 'Used Memory'
+              type: CALCULATED
+              key: 'vm.memory.used[{#SNMPINDEX}]'
+              delay: 1m
+              history: 7d
+              trends: 365d
+              value_type: UNSIGNED
+              units: B
+              params: 'last(//vm.memory.used_raw[{#SNMPINDEX}]) * last(//vm.memory.units[{#SNMPINDEX}])'
+              description: 'Memória física utilizada em bytes.'
+              tags:
+                - tag: component
+                  value: memory
+            - uuid: '9c3089eee1294c25900cddb150414574'
+              name: 'Memory Utilization'
+              type: CALCULATED
+              key: 'vm.memory.util[{#SNMPINDEX}]'
+              delay: 1m
+              history: 7d
+              trends: 365d
+              value_type: FLOAT
+              units: '%'
+              params: 'last(//vm.memory.used[{#SNMPINDEX}]) / last(//vm.memory.total[{#SNMPINDEX}]) * 100'
+              description: 'Percentual de utilização da memória física.'
+              tags:
+                - tag: component
+                  value: memory
+          trigger_prototypes:
+            - uuid: '0512fa4f05204aaab9fa52ca2e7485fd'
+              expression: 'last(/VMware ESXi SNMP Custom/vm.memory.util[{#SNMPINDEX}]) >= {$MEMORY.UTIL.MAX.ATT}'
+              name: 'Memory utilization is attention (>= {$MEMORY.UTIL.MAX.ATT}%) on {#STORAGE_DESCR}'
+              opdata: 'Current: {ITEM.LASTVALUE1} (Used: {?last(//vm.memory.used[{#SNMPINDEX}])} / Total: {?last(//vm.memory.total[{#SNMPINDEX}])})'
+              priority: WARNING
+              dependencies:
+                - name: 'Memory utilization is trouble (>= {$MEMORY.UTIL.MAX.TROU}%) on {#STORAGE_DESCR}'
+                  expression: 'last(/VMware ESXi SNMP Custom/vm.memory.util[{#SNMPINDEX}]) >= {$MEMORY.UTIL.MAX.TROU}'
+            - uuid: '8d10a9dfd59a4fcfaf4cb3845117c916'
+              expression: 'last(/VMware ESXi SNMP Custom/vm.memory.util[{#SNMPINDEX}]) >= {$MEMORY.UTIL.MAX.TROU}'
+              name: 'Memory utilization is trouble (>= {$MEMORY.UTIL.MAX.TROU}%) on {#STORAGE_DESCR}'
+              opdata: 'Current: {ITEM.LASTVALUE1} (Used: {?last(//vm.memory.used[{#SNMPINDEX}])} / Total: {?last(//vm.memory.total[{#SNMPINDEX}])})'
+              priority: AVERAGE
+              dependencies:
+                - name: 'Memory utilization is critical (>= {$MEMORY.UTIL.MAX.CRIT}%) on {#STORAGE_DESCR}'
+                  expression: 'last(/VMware ESXi SNMP Custom/vm.memory.util[{#SNMPINDEX}]) >= {$MEMORY.UTIL.MAX.CRIT}'
+            - uuid: '48820c72cbdd454b9958fa74ec982102'
+              expression: 'last(/VMware ESXi SNMP Custom/vm.memory.util[{#SNMPINDEX}]) >= {$MEMORY.UTIL.MAX.CRIT}'
+              name: 'Memory utilization is critical (>= {$MEMORY.UTIL.MAX.CRIT}%) on {#STORAGE_DESCR}'
+              opdata: 'Current: {ITEM.LASTVALUE1} (Used: {?last(//vm.memory.used[{#SNMPINDEX}])} / Total: {?last(//vm.memory.total[{#SNMPINDEX}])})'
+              priority: HIGH
+        - uuid: 'c35d08f7d2ba44ee929185ce7ef63271'
+          name: 'Network Interface Discovery'
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#IFNAME},1.3.6.1.2.1.31.1.1.1.1,{#IFTYPE},1.3.6.1.2.1.2.2.1.3]'
+          key: net.if.discovery
+          delay: 1h
+          lifetime: '0'
+          item_prototypes:
+            - uuid: '65f233094eb64ebfae3848fde124e42b'
+              name: 'Interface {#IFNAME}: Link status'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.2.1.2.2.1.8.{#SNMPINDEX}'
+              key: 'net.if.status[{#SNMPINDEX}]'
+              delay: 1m
+              history: 7d
+              trends: '0'
+              value_type: UNSIGNED
+              valuemap:
+                name: 'Interface Status'
+              description: 'Status operacional da interface de rede (1: up, 2: down, etc.).'
+              tags:
+                - tag: component
+                  value: network
+            - uuid: 'b67832cc555b4024bbce598239187079'
+              name: 'Interface {#IFNAME}: Administrative status'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.2.1.2.2.1.7.{#SNMPINDEX}'
+              key: 'net.if.adminstatus[{#SNMPINDEX}]'
+              delay: 5m
+              history: 7d
+              trends: '0'
+              value_type: UNSIGNED
+              valuemap:
+                name: 'Interface Status'
+              description: 'Status administrativo da interface de rede (1: up, 2: down, etc.).'
+              tags:
+                - tag: component
+                  value: network
+      valuemaps:
+        - uuid: '625812cb2aec4e7086cc9d35f782219e'
+          name: 'Interface Status'
+          mappings:
+            - value: '1'
+              newvalue: up
+            - value: '2'
+              newvalue: down
+            - value: '3'
+              newvalue: testing
+            - value: '4'
+              newvalue: unknown
+            - value: '5'
+              newvalue: dormant
+            - value: '6'
+              newvalue: notPresent
+            - value: '7'
+              newvalue: lowerLayerDown
