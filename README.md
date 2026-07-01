@@ -4,30 +4,47 @@ Este repositório contém templates customizados para monitoramento de hosts **V
 
 ---
 
-## 📋 Templates Disponíveis
+## 📋 Templates Disponíveis - Detalhamento Completo
 
-### 1. [Template v2.0 (Limpo)](./vmware_esxi_snmp_template.yaml)
-*   **Versão:** 2.0
-*   **Características:** Monitora inventário, CPU (média de cores), Memória Física (Real Memory) e descobre automaticamente as portas de rede.
-*   **Diferencial:** **Não possui alertas/triggers de Link Down nas placas de rede.** Ideal para servidores que possuem portas físicas desconectadas por opção de projeto (portas sobressalentes), evitando alarmes falsos de cabos desconectados.
+Neste repositório você encontra três opções de templates para atender diferentes cenários de infraestrutura:
 
-### 2. [Template v2.1 (Com Ethernet)](./vmware_esxi_snmp_template_v2.1_with_ethernet.yaml)
-*   **Versão:** 2.1 (Com alertas de rede)
-*   **Características:** Mesmas coletas do v2.0, mas inclui **triggers inteligentes de status de link de rede** (`Interface: Link down`).
-*   **Comportamento do Alarme Inteligente:**
-    *   Se a interface estiver habilitada no ESXi (**Administrativamente UP**), mas o cabo físico for desconectado (ou a porta do switch cair), o Zabbix **irá alarmar**.
-    *   Se a interface for desativada propositalmente nas configurações do ESXi (**Administrativamente DOWN**), o Zabbix **não irá alarmar** (tratando a porta desligada como manutenção planejada e evitando alertas desnecessários).
+### 1. [Template v2.0 (Limpo - Sem Alertas de Link de Rede)](./vmware_esxi_snmp_template.yaml)
+*   **Versão:** 2.0 (Foco em Processamento e Memória)
+*   **Indicação de Uso:** Ideal para servidores que possuem placas de rede desconectadas por opção de projeto (portas sobressalentes/reservas). Ele evita alertas falsos de "cabo desconectado" em portas não utilizadas.
+*   **O que ele monitora em detalhes:**
+    *   **Identificação do Sistema:** Nome do host (`system.name`) e descrição/versão do ESXi (`system.descr`).
+    *   **Uptime:** Tempo online do host (`system.uptime`) com alerta de reboot caso o uptime seja menor que 10 minutos.
+    *   **Processamento (CPU):** Uso médio geral de CPU (`vm.cpu.util`) com alarmes de Atenção (80%), Problema (90%) e Crítico (95%).
+    *   **Cores de CPU (LLD):** Descobre e monitora dinamicamente a carga de cada núcleo individual de processamento.
+    *   **Memória RAM Física (LLD):** Identifica a memória física instalada, monitorando o espaço total (B), usado (B) e percentual de uso (%), com alertas em 3 níveis (80%, 90% e 95%).
+    *   **Placas de Rede (LLD):** Descobre as placas físicas de rede e monitora o status delas, **mas não cria nenhum alarme/trigger de queda de sinal (Link Down).**
 
-### 3. [Template v3.0 (Completo - Sem Redes Físicas)](./vmware_esxi_snmp_template_v3.0_full.yaml)
-*   **Versão:** 3.0 (Completo - Sem Placas de Rede)
-*   **Características:** A versão mais robusta de monitoramento SNMP puro para o ESXi. Ela realiza a descoberta e monitoramento de:
-    *   **CPU e Memória RAM:** Consumo médio, consumo por núcleo físico de CPU e memória RAM física (excluindo swap/memórias virtuais).
-    *   **Datastores / Discos:** Descoberta automática de Datastores/Volumes de disco com alertas de capacidade (Atenção a 85% e Crítico a 95%).
-    *   **Máquinas Virtuais (VMs):** Descoberta automática de todas as VMs rodando no host, coletando Estado de Energia (Ligada/Desligada/Suspensa), CPUs virtuais alocadas, RAM alocada e Sistema Operacional.
-*   **Diferencial:**
-    *   **Exclui totalmente a descoberta de placas de rede físicas (`vmnic`)** para evitar alarmes falsos de portas desconectadas.
-    *   **Não inclui coleta de ICMP Ping**, evitando conflitos de chaves duplicadas (`icmpping`) caso você já use outro template dedicado para ping (ex: `PowerOFF`).
-    *   **Habilita o fechamento manual (Manual Close)** em todos os alarmes de Datastore e Máquinas Virtuais.
+---
+
+### 2. [Template v2.1 (Com Ethernet Inteligente)](./vmware_esxi_snmp_template_v2.1_with_ethernet.yaml)
+*   **Versão:** 2.1 (Foco em Processamento, Memória e Redes Físicas)
+*   **Indicação de Uso:** Recomendado para ambientes onde o status físico de conexão dos cabos de rede é crítico, mas você deseja controle inteligente sobre portas desativadas.
+*   **O que ele monitora em detalhes:**
+    *   **Tudo do Template v2.0:** CPU média, núcleos individuais, RAM e uptime.
+    *   **Alertas de Rede Inteligentes (Link Down):** Possui protótipo de gatilho para queda de link (`Interface {#IFNAME}: Link down`) configurado com lógica de dupla validação:
+        *   **Dispara Alerta:** Se a placa operacional estiver desligada (`Operational Status = DOWN`), mas a placa estiver ativa nas configurações do ESXi (`Administrative Status = UP`).
+        *   **Não Dispara Alerta:** Se a placa for desativada administrativamente no painel do ESXi (`Administrative Status = DOWN`).
+        *   *Todos os alertas de queda de rede possuem suporte a fechamento manual (Manual Close) ativo.*
+
+---
+
+### 3. [Template v3.0 (Completo - Armazenamento e VMs - Sem Redes Físicas)](./vmware_esxi_snmp_template_v3.0_full.yaml)
+*   **Versão:** 3.0 (Foco em Armazenamento, VMs e SNMP Puro)
+*   **Indicação de Uso:** O mais completo para monitoramento profundo de servidores de virtualização autônomos. Ele ignora as placas de rede para evitar ruído de alarmes e não inclui ping ICMP para evitar conflitos com outros templates de conectividade (como o `PowerOFF`).
+*   **O que ele monitora em detalhes:**
+    *   **CPU e RAM:** Uso de CPU geral (médio), cores de CPU individuais e uso detalhado de memória RAM física (excluindo swap/memória virtual).
+    *   **Datastores / Armazenamento (LLD):** Mapeia automaticamente todas as partições de disco e Datastores VMFS (onde ficam as máquinas virtuais). Coleta Espaço Total (GB), Espaço Usado (GB) e Porcentagem de uso, gerando alarmes de **Atenção (85%)** e **Crítico (95%)** com suporte a fechamento manual.
+    *   **Máquinas Virtuais Internas (LLD):** Consulta a tabela do hypervisor (`vmwVmTable`) e descobre todas as VMs hospedadas no host, monitorando:
+        *   Nome visível de cada VM.
+        *   Estado de Energia (Ligada, Desligada, Suspensa).
+        *   Quantidade de vCPUs e Memória RAM configurada para cada VM.
+        *   Sistema Operacional instalado na VM.
+        *   **Alerta de VM Desligada:** Avisa se uma máquina virtual for desligada ou suspensa (com suporte a fechamento manual).
 
 ---
 
