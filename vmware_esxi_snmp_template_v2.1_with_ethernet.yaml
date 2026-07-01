@@ -339,6 +339,7 @@ zabbix_export:
               expression: 'last(/VMware ESXi SNMP Custom/net.if.status[{#SNMPINDEX}])=2 and last(/VMware ESXi SNMP Custom/net.if.adminstatus[{#SNMPINDEX}])=1'
               name: 'Interface {#IFNAME}: Link down'
               priority: AVERAGE
+              manual_close: 'YES'
               description: 'A interface operacional está fora do ar (down), mas está configurada administrativamente como ativa (up).'
               tags:
                 - tag: scope
