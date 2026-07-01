@@ -18,6 +18,15 @@ Este repositório contém templates customizados para monitoramento de hosts **V
     *   Se a interface estiver habilitada no ESXi (**Administrativamente UP**), mas o cabo físico for desconectado (ou a porta do switch cair), o Zabbix **irá alarmar**.
     *   Se a interface for desativada propositalmente nas configurações do ESXi (**Administrativamente DOWN**), o Zabbix **não irá alarmar** (tratando a porta desligada como manutenção planejada e evitando alertas desnecessários).
 
+### 3. [Template v3.0 (Completo - Sem Redes Físicas)](./vmware_esxi_snmp_template_v3.0_full.yaml)
+*   **Versão:** 3.0 (Completo - Sem Placas de Rede)
+*   **Características:** A versão mais robusta de monitoramento SNMP + Ping para o ESXi. Ela realiza a descoberta e monitoramento de:
+    *   **ICMP Ping:** Latência, perda de pacotes e disponibilidade física do host.
+    *   **CPU e Memória RAM:** Consumo médio, consumo por núcleo físico de CPU e memória RAM física (excluindo swap/memórias virtuais).
+    *   **Datastores / Discos:** Descoberta automática de Datastores/Volumes de disco com alertas de capacidade (Atenção a 85% e Crítico a 95%).
+    *   **Máquinas Virtuais (VMs):** Descoberta automática de todas as VMs rodando no host, coletando Estado de Energia (Ligada/Desligada/Suspensa), CPUs virtuais alocadas, RAM alocada e Sistema Operacional.
+*   **Diferencial:** **Exclui totalmente a descoberta de placas de rede físicas (`vmnic`)** para evitar alarmes falsos de portas desconectadas, e **habilita o fechamento manual (Manual Close)** em todos os alarmes de Datastore e Máquinas Virtuais.
+
 ---
 
 ## 🧠 Entendimento Crítico: Métricas de CPU (Zabbix vs. vCenter)
