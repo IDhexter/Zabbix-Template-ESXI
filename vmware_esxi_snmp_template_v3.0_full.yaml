@@ -1,10 +1,9 @@
 # =========================================================================================
 # METADADOS DO TEMPLATE ZABBIX
 # =========================================================================================
-# OBJETIVO: Monitoramento de Esxi 8.0.3+ via SNMP e Ping ICMP.
-# VERSÃO: 3.0 (Completo - Sem Placas de Rede Físicas)
+# OBJETIVO: Monitoramento de Esxi 8.0.3+ via SNMP (Sem ICMP e sem Redes Físicas).
+# VERSÃO: 3.0 (Completo - Sem Conflitos de Ping)
 # RECURSOS:
-#   - ICMP Ping (Uptime, Latência, Perda de Pacotes)
 #   - Informações Básicas do Host e SNMP
 #   - CPU e RAM Físicas (com Cores individuais)
 #   - Descoberta automática de Datastores/Discos
@@ -14,18 +13,17 @@ zabbix_export:
   version: '6.0'
   date: '2026-07-01T17:00:00Z'
   groups:
-    - uuid: '5adcfe3303b64213b7537467edebeedd'
+    - uuid: 'b88f6b7fed244a01af657adac18ed361'
       name: 'Templates/Virtualization'
   templates:
-    - uuid: 'b92bcbf871cb416c8b83455a3c660acd'
+    - uuid: '5812c47e98cf494bb742c62a2a186f41'
       template: 'VMware ESXi SNMP Custom V3'
       name: 'VMware ESXi SNMP Custom V3'
       description: |
-        OBJETIVO: Monitoramento completo de servidores VMware ESXi via SNMP e Ping ICMP.
-        VERSÃO: 3.0 (Sem Placas de Rede Físicas)
+        OBJETIVO: Monitoramento completo de servidores VMware ESXi via SNMP (Sem ICMP Ping).
+        VERSÃO: 3.0 (Sem Placas de Rede Físicas e Sem Ping)
         
         RECURSOS:
-        - Ping ICMP (Latência, perda de pacotes, status)
         - CPU e Memória RAM
         - Descoberta automática de Datastores
         - Descoberta automática de VMs (vmwVmTable)
@@ -48,74 +46,9 @@ zabbix_export:
           value: '85'
         - macro: '{$STORAGE.UTIL.MAX.CRIT}'
           value: '95'
-        - macro: '{$ICMP.PING.TIME.MAX}'
-          value: '150'
-        - macro: '{$ICMP.PING.LOSS.MAX}'
-          value: '20'
       items:
-        # PING ICMP
-        - uuid: '8d436a88959d4b8284c4b854ecffd29e'
-          name: 'ICMP ping'
-          type: SIMPLE
-          key: icmpping
-          delay: 1m
-          history: 7d
-          trends: 365d
-          tags:
-            - tag: component
-              value: network
-          triggers:
-            - uuid: 'c6f908606b1b4e0c95920ff8c7da130d'
-              expression: 'max(/VMware ESXi SNMP Custom V3/icmpping,3m)=0'
-              name: 'Host is unavailable via ICMP ping'
-              priority: DISASTER
-              manual_close: 'YES'
-              description: 'O host não responde aos pings ICMP nos últimos 3 minutos.'
-        - uuid: '74011c4b5dfa46b48bef7f955bab521d'
-          name: 'ICMP ping response time'
-          type: SIMPLE
-          key: icmppingsec
-          delay: 1m
-          history: 7d
-          trends: 365d
-          value_type: FLOAT
-          units: s
-          tags:
-            - tag: component
-              value: network
-          triggers:
-            - uuid: '05c3b0993ff947b69594c76167642ed5'
-              expression: 'avg(/VMware ESXi SNMP Custom V3/icmppingsec,5m)>{$ICMP.PING.TIME.MAX}/1000'
-              name: 'High ICMP ping response time (>= {$ICMP.PING.TIME.MAX}ms)'
-              priority: WARNING
-              manual_close: 'YES'
-              dependencies:
-                - name: 'Host is unavailable via ICMP ping'
-                  expression: 'max(/VMware ESXi SNMP Custom V3/icmpping,3m)=0'
-        - uuid: '85b010609d37443d869153493adf0f14'
-          name: 'ICMP loss percentage'
-          type: SIMPLE
-          key: icmppingloss
-          delay: 1m
-          history: 7d
-          trends: 365d
-          value_type: FLOAT
-          units: '%'
-          tags:
-            - tag: component
-              value: network
-          triggers:
-            - uuid: '8cffe6d569a843629d2b6ca93518afbe'
-              expression: 'avg(/VMware ESXi SNMP Custom V3/icmppingloss,5m)>{$ICMP.PING.LOSS.MAX}'
-              name: 'High ICMP packet loss (>= {$ICMP.PING.LOSS.MAX}%)'
-              priority: AVERAGE
-              manual_close: 'YES'
-              dependencies:
-                - name: 'Host is unavailable via ICMP ping'
-                  expression: 'max(/VMware ESXi SNMP Custom V3/icmpping,3m)=0'
-
         # SNMP SYSTEM
-        - uuid: '97d6fbfcb5fa451287f35256014d0304'
+        - uuid: '95175aa9dc1046d3b8a054d8548367d3'
           name: 'System name'
           type: SNMP_AGENT
           snmp_oid: '1.3.6.1.2.1.1.5.0'
@@ -128,7 +61,7 @@ zabbix_export:
           tags:
             - tag: component
               value: system
-        - uuid: 'dfdd9bf0474c49328acad78ea0fb603d'
+        - uuid: '3cf8a620853d4b3cadb79e6ccf1c8dfb'
           name: 'System description'
           type: SNMP_AGENT
           snmp_oid: '1.3.6.1.2.1.1.1.0'
@@ -140,7 +73,7 @@ zabbix_export:
           tags:
             - tag: component
               value: system
-        - uuid: '4d8cc1b0df744e8e81b7f55ab561b1df'
+        - uuid: 'f96f0324db78429e8a2cea02204f0c5e'
           name: 'System uptime'
           type: SNMP_AGENT
           snmp_oid: '1.3.6.1.2.1.1.3.0'
@@ -159,14 +92,11 @@ zabbix_export:
             - tag: component
               value: system
           triggers:
-            - uuid: '0fa5d8dff83c442698dff3fdcd9f0c5e'
+            - uuid: 'e9542a67f0b343bb898d9115353d1219'
               expression: 'nodata(/VMware ESXi SNMP Custom V3/system.uptime, 5m) = 1'
               name: 'Host is unavailable (No SNMP data for 5 minutes)'
               priority: DISASTER
-              dependencies:
-                - name: 'Host is unavailable via ICMP ping'
-                  expression: 'max(/VMware ESXi SNMP Custom V3/icmpping,3m)=0'
-            - uuid: '9bb8cc232237484a8f15edf83270381a'
+            - uuid: '5ee84fd57302492bbbd7966ebbed07bf'
               expression: 'last(/VMware ESXi SNMP Custom V3/system.uptime) < 10m'
               name: 'Host has been restarted'
               priority: WARNING
@@ -176,7 +106,7 @@ zabbix_export:
                   expression: 'nodata(/VMware ESXi SNMP Custom V3/system.uptime, 5m) = 1'
 
         # CPU UTILIZATION
-        - uuid: 'f47ea8873aa54206a978ca9580367d75'
+        - uuid: 'cb37a2c9ec40455489655e9e159b41c3'
           name: 'CPU average utilization'
           type: CALCULATED
           key: vm.cpu.util
@@ -191,28 +121,28 @@ zabbix_export:
             - tag: component
               value: cpu
           triggers:
-            - uuid: '10887105e66443258f8927e746d0b7d5'
+            - uuid: '2352f46de0f14ed984d01802624e9a38'
               expression: 'last(/VMware ESXi SNMP Custom V3/vm.cpu.util) >= {$CPU.UTIL.ATT}'
               name: 'Average CPU utilization is attention (>= {$CPU.UTIL.ATT}%)'
               priority: WARNING
               dependencies:
                 - name: 'Average CPU utilization is trouble (>= {$CPU.UTIL.TROU}%)'
                   expression: 'last(/VMware ESXi SNMP Custom V3/vm.cpu.util) >= {$CPU.UTIL.TROU}'
-            - uuid: 'fc4f168aff97432ab3907dc1e3dd19d4'
+            - uuid: 'e493dbcf84e043e1acd774036431b231'
               expression: 'last(/VMware ESXi SNMP Custom V3/vm.cpu.util) >= {$CPU.UTIL.TROU}'
               name: 'Average CPU utilization is trouble (>= {$CPU.UTIL.TROU}%)'
               priority: AVERAGE
               dependencies:
                 - name: 'Average CPU utilization is critical (>= {$CPU.UTIL.CRIT}%)'
                   expression: 'last(/VMware ESXi SNMP Custom V3/vm.cpu.util) >= {$CPU.UTIL.CRIT}'
-            - uuid: '0327b4fd7ebd410592faf698df920ca2'
+            - uuid: 'ec8b6f38ee82493f920fd21a82f3466f'
               expression: 'last(/VMware ESXi SNMP Custom V3/vm.cpu.util) >= {$CPU.UTIL.CRIT}'
               name: 'Average CPU utilization is critical (>= {$CPU.UTIL.CRIT}%)'
               priority: HIGH
 
       discovery_rules:
         # 1. CPU CORE DISCOVERY
-        - uuid: 'a4b9dcd56874493495b4d5659d01d4e8'
+        - uuid: '3b21aaa6b3824559aea6980be44acd41'
           name: 'CPU Core Discovery'
           type: SNMP_AGENT
           snmp_oid: 'discovery[{#CPU_LOAD}, 1.3.6.1.2.1.25.3.3.1.2]'
@@ -220,7 +150,7 @@ zabbix_export:
           delay: 1h
           lifetime: '0'
           item_prototypes:
-            - uuid: 'b8fc1bed690d40ed90ade1a79ad8b5df'
+            - uuid: 'b97b6cfabc354b90b3f51f69571722a5'
               name: 'CPU Core {#SNMPINDEX} utilization'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.25.3.3.1.2.{#SNMPINDEX}'
@@ -236,7 +166,7 @@ zabbix_export:
                   value: cpu
 
         # 2. PHYSICAL MEMORY DISCOVERY (RAM)
-        - uuid: '861ba1ed294c43568316e7ca9d40b532'
+        - uuid: 'cf93d102e26f41e0905794ca0a7d960c'
           name: 'Physical Memory Discovery'
           type: SNMP_AGENT
           snmp_oid: 'discovery[{#STORAGE_TYPE},1.3.6.1.2.1.25.2.3.1.2,{#STORAGE_DESCR},1.3.6.1.2.1.25.2.3.1.3]'
@@ -250,7 +180,7 @@ zabbix_export:
                 value: '^Real Memory$'
                 formulaid: A
           item_prototypes:
-            - uuid: 'e10dff70a7cf4966b503702ba03daa0d'
+            - uuid: '555144e61f594ad389b3cefacf06e383'
               name: 'Memory Allocation Units'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.25.2.3.1.4.{#SNMPINDEX}'
@@ -263,7 +193,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: memory
-            - uuid: '200853d24c6141599954455ed9fde3a2'
+            - uuid: 'fdd16e6541d542dda91917f624c2b37c'
               name: 'Memory Total Size (raw)'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.25.2.3.1.5.{#SNMPINDEX}'
@@ -275,7 +205,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: memory
-            - uuid: 'df39982a85124a49884523f956e7bb80'
+            - uuid: '1a5e9e0ae85449eaba05376d30e7ca43'
               name: 'Memory Used Size (raw)'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.25.2.3.1.6.{#SNMPINDEX}'
@@ -287,7 +217,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: memory
-            - uuid: '089682b862b84d22a4e8c3431b6dcb1b'
+            - uuid: 'cfcfb805e83f4459afe4a8fdd621d07b'
               name: 'Total Memory'
               type: CALCULATED
               key: 'vm.memory.total[{#SNMPINDEX}]'
@@ -300,7 +230,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: memory
-            - uuid: '61a16d0d7a8e4002b07d9ae317df6559'
+            - uuid: '3475b931a91b465298aaff494c6adf8a'
               name: 'Used Memory'
               type: CALCULATED
               key: 'vm.memory.used[{#SNMPINDEX}]'
@@ -313,7 +243,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: memory
-            - uuid: '5e7d91fb7f58474a8ec3702820209e97'
+            - uuid: '4ce40dcf8ee04da6b99f5d21284f4f20'
               name: 'Memory Utilization'
               type: CALCULATED
               key: 'vm.memory.util[{#SNMPINDEX}]'
@@ -327,7 +257,7 @@ zabbix_export:
                 - tag: component
                   value: memory
           trigger_prototypes:
-            - uuid: '37dd03aaedc8492aa6014ee6307cc0c6'
+            - uuid: 'c4dcf3347a1f43298f78e620d9475a8c'
               expression: 'last(/VMware ESXi SNMP Custom V3/vm.memory.util[{#SNMPINDEX}]) >= {$MEMORY.UTIL.MAX.ATT}'
               name: 'Memory utilization is attention (>= {$MEMORY.UTIL.MAX.ATT}%) on {#STORAGE_DESCR}'
               opdata: 'Current: {ITEM.LASTVALUE1} (Used: {?last(//vm.memory.used[{#SNMPINDEX}])} / Total: {?last(//vm.memory.total[{#SNMPINDEX}])})'
@@ -335,7 +265,7 @@ zabbix_export:
               dependencies:
                 - name: 'Memory utilization is trouble (>= {$MEMORY.UTIL.MAX.TROU}%) on {#STORAGE_DESCR}'
                   expression: 'last(/VMware ESXi SNMP Custom V3/vm.memory.util[{#SNMPINDEX}]) >= {$MEMORY.UTIL.MAX.TROU}'
-            - uuid: '32309bbf01854c0e8d7ee270c6e1173e'
+            - uuid: 'e2aaf2ed872c4d528a14378d77e3ccfb'
               expression: 'last(/VMware ESXi SNMP Custom V3/vm.memory.util[{#SNMPINDEX}]) >= {$MEMORY.UTIL.MAX.TROU}'
               name: 'Memory utilization is trouble (>= {$MEMORY.UTIL.MAX.TROU}%) on {#STORAGE_DESCR}'
               opdata: 'Current: {ITEM.LASTVALUE1} (Used: {?last(//vm.memory.used[{#SNMPINDEX}])} / Total: {?last(//vm.memory.total[{#SNMPINDEX}])})'
@@ -343,14 +273,14 @@ zabbix_export:
               dependencies:
                 - name: 'Memory utilization is critical (>= {$MEMORY.UTIL.MAX.CRIT}%) on {#STORAGE_DESCR}'
                   expression: 'last(/VMware ESXi SNMP Custom V3/vm.memory.util[{#SNMPINDEX}]) >= {$MEMORY.UTIL.MAX.CRIT}'
-            - uuid: '82f6cb197e914b8e8e178a2afecacdf8'
+            - uuid: '2c9c6b4915fa40ea910a7480b78553d9'
               expression: 'last(/VMware ESXi SNMP Custom V3/vm.memory.util[{#SNMPINDEX}]) >= {$MEMORY.UTIL.MAX.CRIT}'
               name: 'Memory utilization is critical (>= {$MEMORY.UTIL.MAX.CRIT}%) on {#STORAGE_DESCR}'
               opdata: 'Current: {ITEM.LASTVALUE1} (Used: {?last(//vm.memory.used[{#SNMPINDEX}])} / Total: {?last(//vm.memory.total[{#SNMPINDEX}])})'
               priority: HIGH
 
         # 3. DATASTORE / STORAGE DISCOVERY (Discos)
-        - uuid: 'f102422b8f974483add4b864f94ddb36'
+        - uuid: 'a256de48f0774e9990422b02982bb1c0'
           name: 'Datastore/Storage Discovery'
           type: SNMP_AGENT
           snmp_oid: 'discovery[{#STORAGE_TYPE},1.3.6.1.2.1.25.2.3.1.2,{#STORAGE_DESCR},1.3.6.1.2.1.25.2.3.1.3]'
@@ -365,7 +295,7 @@ zabbix_export:
                 operator: NOT_MATCHES_REGEX
                 formulaid: A
           item_prototypes:
-            - uuid: 'a8bf44a6971244cbafa382458bf77709'
+            - uuid: 'fc21c84280b64fc2b92286ba2dc9ff6d'
               name: 'Storage {#STORAGE_DESCR}: Allocation units'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.25.2.3.1.4.{#SNMPINDEX}'
@@ -378,7 +308,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: storage
-            - uuid: 'cdcc7cd319cb4d828e871ae11d5feb28'
+            - uuid: 'b447c41fbd8e413696a80f97d8892114'
               name: 'Storage {#STORAGE_DESCR}: Total raw size'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.25.2.3.1.5.{#SNMPINDEX}'
@@ -390,7 +320,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: storage
-            - uuid: '739c7adecff64f32a48350261a756fe1'
+            - uuid: '5cf860f350a24398b19c30e9ca737561'
               name: 'Storage {#STORAGE_DESCR}: Used raw size'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.25.2.3.1.6.{#SNMPINDEX}'
@@ -402,7 +332,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: storage
-            - uuid: 'be465959bcd243558a976976bd00b22b'
+            - uuid: '2394344f091641cf93816a59892e0f61'
               name: 'Storage {#STORAGE_DESCR}: Total space'
               type: CALCULATED
               key: 'vm.storage.total[{#SNMPINDEX}]'
@@ -415,7 +345,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: storage
-            - uuid: 'b01f7849128c4df3afaeb4d817fbc59d'
+            - uuid: '3a8d16c4c2f846348828c559ebdf1a7d'
               name: 'Storage {#STORAGE_DESCR}: Used space'
               type: CALCULATED
               key: 'vm.storage.used[{#SNMPINDEX}]'
@@ -428,7 +358,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: storage
-            - uuid: '7d5d2f152f9b417ca5392792a963f877'
+            - uuid: '8074d14cd1c54f4da044a4ff3419d6a0'
               name: 'Storage {#STORAGE_DESCR}: Space utilization'
               type: CALCULATED
               key: 'vm.storage.util[{#SNMPINDEX}]'
@@ -442,7 +372,7 @@ zabbix_export:
                 - tag: component
                   value: storage
           trigger_prototypes:
-            - uuid: 'd15c22506f164c0c9a6f493bd0b9f2b5'
+            - uuid: 'ecae9ea49ab64d71ba0310e41863ad1c'
               expression: 'last(/VMware ESXi SNMP Custom V3/vm.storage.util[{#SNMPINDEX}]) >= {$STORAGE.UTIL.MAX.WARN}'
               name: 'Storage {#STORAGE_DESCR}: Space utilization is high (>= {$STORAGE.UTIL.MAX.WARN}%)'
               opdata: 'Current: {ITEM.LASTVALUE1} (Used: {?last(//vm.storage.used[{#SNMPINDEX}])} / Total: {?last(//vm.storage.total[{#SNMPINDEX}])})'
@@ -451,7 +381,7 @@ zabbix_export:
               dependencies:
                 - name: 'Storage {#STORAGE_DESCR}: Space utilization is critical (>= {$STORAGE.UTIL.MAX.CRIT}%)'
                   expression: 'last(/VMware ESXi SNMP Custom V3/vm.storage.util[{#SNMPINDEX}]) >= {$STORAGE.UTIL.MAX.CRIT}'
-            - uuid: '76463e69f7d442d78a6f33d1bdccc1a7'
+            - uuid: '271afb155c3246c99b1cb32fd0cfd62c'
               expression: 'last(/VMware ESXi SNMP Custom V3/vm.storage.util[{#SNMPINDEX}]) >= {$STORAGE.UTIL.MAX.CRIT}'
               name: 'Storage {#STORAGE_DESCR}: Space utilization is critical (>= {$STORAGE.UTIL.MAX.CRIT}%)'
               opdata: 'Current: {ITEM.LASTVALUE1} (Used: {?last(//vm.storage.used[{#SNMPINDEX}])} / Total: {?last(//vm.storage.total[{#SNMPINDEX}])})'
@@ -459,7 +389,7 @@ zabbix_export:
               manual_close: 'YES'
 
         # 4. VIRTUAL MACHINE DISCOVERY (VMs internas)
-        - uuid: '0a9bf974f1e24e1d850c9977fa8868aa'
+        - uuid: '3853b5be3eac4fecadaa93dc84a7b105'
           name: 'VMware VM Discovery'
           type: SNMP_AGENT
           snmp_oid: 'discovery[{#VM_NAME},1.3.6.1.4.1.6876.2.1.1.2]'
@@ -467,7 +397,7 @@ zabbix_export:
           delay: 1h
           lifetime: '0'
           item_prototypes:
-            - uuid: '621f8638160f4d708f3768413053a0be'
+            - uuid: 'ab2070671a264b22b1759d8b1b0c3602'
               name: 'VM {#VM_NAME}: Configured CPUs'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.4.1.6876.2.1.1.3.{#SNMPINDEX}'
@@ -480,7 +410,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: virtual-machine
-            - uuid: 'abc07479bbb34e27979a3a5b6eb4930f'
+            - uuid: '943784bd6a124949a6a4fe13ad7a26d2'
               name: 'VM {#VM_NAME}: Configured RAM'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.4.1.6876.2.1.1.4.{#SNMPINDEX}'
@@ -498,7 +428,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: virtual-machine
-            - uuid: '515e9edcde644e74a8b6982afdfbebad'
+            - uuid: '191654f1f29a4678ac484d99b3aaecad'
               name: 'VM {#VM_NAME}: Guest OS'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.4.1.6876.2.1.1.5.{#SNMPINDEX}'
@@ -511,7 +441,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: virtual-machine
-            - uuid: '2ea2234ebe6f4f3bbc3fef2d38674f2d'
+            - uuid: '1daf76d770384d5480d6169d00fa4af1'
               name: 'VM {#VM_NAME}: Power state'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.4.1.6876.2.1.1.8.{#SNMPINDEX}'
@@ -527,7 +457,7 @@ zabbix_export:
                 - tag: component
                   value: virtual-machine
               trigger_prototypes:
-                - uuid: '8cee5ee2fbab47d0a7b474e03f42d1ee'
+                - uuid: 'ce116a7c6d29488894916689c7204f29'
                   expression: 'last(/VMware ESXi SNMP Custom V3/vmw.vm.state[{#SNMPINDEX}]) <> 1'
                   name: 'VM {#VM_NAME}: is not running (State: {ITEM.LASTVALUE})'
                   priority: WARNING
@@ -538,7 +468,7 @@ zabbix_export:
                       value: availability
 
       valuemaps:
-        - uuid: 'dece4bd1ce4648688b2e6012a671326c'
+        - uuid: '45f881ab06a7487cb1b576077325b9ae'
           name: 'VM State'
           mappings:
             - value: '1'
