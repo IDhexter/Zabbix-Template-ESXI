@@ -46,6 +46,14 @@ Neste repositório você encontra três opções de templates para atender difer
         *   Sistema Operacional instalado na VM.
         *   **Alerta de VM Desligada:** Avisa se uma máquina virtual for desligada ou suspensa (com suporte a fechamento manual).
 
+### 4. [Template Network WAN Circuits Custom Thresholds](./zabbix_wan_circuits_thresholds_template.yaml)
+*   **Versão:** 1.0 (Template para Roteadores/Links WAN)
+*   **Indicação de Uso:** Automatiza 100% a criação de alertas e gráficos de tráfego nos 4 hosts de circuito (`IPN-RTR-NY01`, `IPN-RTR-NY02`, `RTR-NYEXT1`, `RTR-NYEXT3-XO`).
+*   **O que ele faz automaticamente:**
+    *   **Descoberta Inteligente (LLD):** Descobre apenas as interfaces especificadas (`Te0/1/2` e `Gi0/0/0`) usando um filtro regex.
+    *   **Triggers Dinâmicas sem Configuração Manual:** Cria as 4 triggers separadas (IN 65%, IN 95%, OUT 65%, OUT 95%) calculando os limites **automaticamente** com base na velocidade real negociada da placa (ex: 6.5G/9.5G para placas de 10Gbps e 650M/950M para placas de 1Gbps).
+    *   **Gráfico Automático com Escala Dinâmica:** Gera um gráfico de tráfego com altura de 300px, exibição de triggers ativa e **escala Y máxima travada na velocidade real da placa** (usando a métrica de velocidade como limite).
+
 ---
 
 ## 🧠 Entendimento Crítico: Métricas de CPU (Zabbix vs. vCenter)
